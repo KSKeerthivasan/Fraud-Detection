@@ -256,20 +256,29 @@ SHAP enables:
 
 ---
 
-## 📸 Screenshots
+## 📸 Screenshots & Dashboard Walkthrough
 
-> _Run `streamlit run app/app.py` to view the interactive dashboard._
+> _Run `streamlit run app/app.py` to view the interactive dashboard locally._
 
-| EDA | Model Metrics |
-|---|---|
-| Class Distribution | Confusion Matrix |
-| Amount Distribution | ROC Curve |
-| Correlation Matrix | PR Curve + Calibration Curve |
+### 📊 Real-Time Model Performance KPI Dashboard
+The landing page of the dashboard displays top-level evaluation metrics of the calibrated final XGBoost classifier, providing instant transparency for executive stakeholders.
+![Model Performance KPI Dashboard](<Screenshot 2026-06-10 211623.png>)
 
-| Explainability |  |
-|---|---|
-| SHAP Summary Plot | SHAP Waterfall Plot |
-| XGBoost Feature Importance | SHAP Force Plot |
+### 🔍 Interactive Test Dataset Explorer & Transaction Inspector
+Compliance analysts can browse transaction records from the held-out test split, with anomalous fraud cases highlighted in crimson red to draw immediate attention.
+![Test Dataset Explorer](<Screenshot 2026-06-10 211658.png>)
+
+### ⚠️ Real-Time High-Risk Fraud Detection & Anomaly Indicators
+When a fraudulent transaction is analyzed, the system flags key risk factors (such as PCA dimensions V14, V17, and V12 scoring significantly below normal limits) and alerts the analyst with a high-risk warning.
+![High-Risk Fraud Detection](<Screenshot 2026-06-10 211804.png>)
+
+### 🟢 Real-Time Low-Risk Prediction & Parameter Analysis
+Legitimate transactions are identified instantly. Visual indicator badges confirm parameters are within healthy thresholds, and predictions are cross-referenced with ground truth for live verification.
+![Low-Risk Prediction](<Screenshot 2026-06-10 211743.png>)
+
+### ⚙️ Model Benchmarking & Decision Threshold Optimization
+Allows business managers to audit default performance against Logistic Regression and Random Forest baselines, and select the optimal decision boundary threshold (e.g., 0.30 vs 0.50 vs 0.70) depending on current fraud risk tolerance.
+![Model Benchmarking](<Screenshot 2026-06-10 211903.png>)
 
 ---
 

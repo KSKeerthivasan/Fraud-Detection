@@ -84,6 +84,9 @@ def get_local_shap_waterfall_fig(model, scaled_features_df: pd.DataFrame):
     is cheap to instantiate (it just reads tree structure from the model), we
     recreate it on-demand.
     """
+    # Use dark style context for the plot
+    plt.style.use("dark_background")
+    
     explainer = shap.TreeExplainer(model)
     shap_values = explainer(scaled_features_df)
 
@@ -91,19 +94,66 @@ def get_local_shap_waterfall_fig(model, scaled_features_df: pd.DataFrame):
     if len(shap_values.shape) == 3:
         shap_values = shap_values[:, :, 1]
 
-    fig, _ = plt.subplots(figsize=(10, 6))
+    # Recreate figure with dark slate facecolor matching glass card backgrounds
+    fig, ax = plt.subplots(figsize=(10, 6.5), facecolor="#0b0f19")
+    ax.set_facecolor("#111827")
+    
+    # Generate waterfall plot inside our axis
     shap.plots.waterfall(shap_values[0], max_display=12, show=False)
-    plt.title("SHAP Local Feature Attribution", fontweight="bold", fontsize=13, pad=15)
+    
+    # Target all text elements and set high-contrast colors
+    ax = fig.gca()
+    ax.set_facecolor("#111827")
+    current_title = ax.get_title()
+    ax.set_title(current_title, color="#f1f5f9", fontweight="bold", fontsize=13, pad=15)
+    
+    # Format labels, axis text and tick marks
+    ax.tick_params(colors="#94a3b8", labelsize=10)
+    ax.xaxis.label.set_color("#cbd5e1")
+    ax.yaxis.label.set_color("#cbd5e1")
+    
+    # Lighten text elements inside the waterfall plot
+    for txt in ax.texts:
+        txt.set_color("#f8fafc")
+        txt.set_fontsize(9)
+        
     plt.tight_layout()
     return fig
 
 
 def get_risk_badge_html(risk_level: str, probability: float) -> str:
     """Returns styled HTML for a colour-coded risk badge."""
-    color_map = {"Low": "#22c55e", "Medium": "#f59e0b", "High": "#ef4444"}
-    color = color_map.get(risk_level, "#6b7280")
+    color_map = {
+        "Low": {
+            "bg": "rgba(16, 185, 129, 0.12)",
+            "border": "rgba(16, 185, 129, 0.4)",
+            "text": "#10b981",
+            "glow": "rgba(16, 185, 129, 0.25)"
+        },
+        "Medium": {
+            "bg": "rgba(245, 158, 11, 0.12)",
+            "border": "rgba(245, 158, 11, 0.4)",
+            "text": "#f59e0b",
+            "glow": "rgba(245, 158, 11, 0.25)"
+        },
+        "High": {
+            "bg": "rgba(239, 68, 68, 0.12)",
+            "border": "rgba(239, 68, 68, 0.4)",
+            "text": "#ef4444",
+            "glow": "rgba(239, 68, 68, 0.35)"
+        }
+    }
+    style = color_map.get(risk_level, {
+        "bg": "rgba(107, 114, 128, 0.12)",
+        "border": "rgba(107, 114, 128, 0.4)",
+        "text": "#9ca3af",
+        "glow": "rgba(107, 114, 128, 0.15)"
+    })
     return (
-        f'<div style="display:inline-block;padding:8px 20px;border-radius:8px;'
-        f'background:{color};color:white;font-size:18px;font-weight:700;">'
-        f"{risk_level} Risk &nbsp;|&nbsp; {probability*100:.1f}%</div>"
+        f'<div style="display:inline-block;padding:8px 22px;border-radius:12px;'
+        f'background:{style["bg"]};border:1px solid {style["border"]};color:{style["text"]};'
+        f'font-size:18px;font-weight:700;box-shadow: 0 0 20px {style["glow"]};'
+        f'backdrop-filter: blur(12px);-webkit-backdrop-filter: blur(12px);'
+        f'letter-spacing: 0.5px;text-transform: uppercase;">'
+        f"{risk_level} Risk &nbsp;•&nbsp; {probability*100:.1f}%</div>"
     )
