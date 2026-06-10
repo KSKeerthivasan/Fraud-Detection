@@ -263,6 +263,14 @@ SHAP enables:
 ### 📊 Real-Time Model Performance KPI Dashboard
 The landing page of the dashboard displays top-level evaluation metrics of the calibrated final XGBoost classifier, providing instant transparency for executive stakeholders.
 ![Model Performance KPI Dashboard](<Screenshot 2026-06-10 211623.png>)
+=======
+
+
+| EDA | Model Metrics |
+|---|---|
+| Class Distribution | Confusion Matrix |
+| Amount Distribution | ROC Curve |
+| Correlation Matrix | PR Curve + Calibration Curve |
 
 ### 🔍 Interactive Test Dataset Explorer & Transaction Inspector
 Compliance analysts can browse transaction records from the held-out test split, with anomalous fraud cases highlighted in crimson red to draw immediate attention.
