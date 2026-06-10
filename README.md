@@ -260,6 +260,19 @@ SHAP enables:
 
 > _Run `streamlit run app/app.py` to view the interactive dashboard._
 
+<img width="1533" height="695" alt="image" src="https://github.com/user-attachments/assets/2890bce6-1c7e-4fa8-843d-afa6c58b22b3" />
+<img width="1527" height="681" alt="image" src="https://github.com/user-attachments/assets/d328cfe0-b6ea-4682-a357-5406e61f1b07" />
+<img width="1526" height="696" alt="image" src="https://github.com/user-attachments/assets/afacc36f-ad66-4405-ad96-2e4919dcc5b3" />
+<img width="1527" height="691" alt="image" src="https://github.com/user-attachments/assets/f6e9360b-c3d4-4c7d-8c35-2cdc8da6daa5" />
+<img width="1522" height="685" alt="image" src="https://github.com/user-attachments/assets/766e61fd-f1d4-4374-b4fd-eb8376366bd9" />
+<img width="1530" height="697" alt="image" src="https://github.com/user-attachments/assets/afbd529f-4349-4634-adbb-3c68717754be" />
+<img width="1523" height="688" alt="image" src="https://github.com/user-attachments/assets/ed9ab038-49ee-4f1a-9f11-e95467720237" />
+<img width="1536" height="688" alt="image" src="https://github.com/user-attachments/assets/ad12c808-bfe0-4c45-8a27-8d721037450a" />
+<img width="1527" height="682" alt="image" src="https://github.com/user-attachments/assets/8b08a86d-2cf3-4c5b-b598-169301ef3c4d" />
+
+
+
+
 | EDA | Model Metrics |
 |---|---|
 | Class Distribution | Confusion Matrix |
