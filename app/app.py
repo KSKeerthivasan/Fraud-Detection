@@ -603,7 +603,8 @@ with tab1:
             display_df = test_samples
 
         # Show mini-table (limited columns for readability)
-        preview_cols = ["Time", "Amount", "V1", "V2", "V3", "V4", "V14", "V17", "Class"]
+        time_col = "Hour" if "Hour" in test_samples.columns else "Time"
+        preview_cols = [time_col, "Amount", "V1", "V2", "V3", "V4", "V14", "V17", "Class"]
         st.dataframe(
             display_df[preview_cols].style.apply(
                 lambda row: [
@@ -624,12 +625,13 @@ with tab1:
             format_func=lambda i: f"Index {i}  |  {'🔴 FRAUD' if test_samples.loc[i,'Class']==1 else '🟢 Legitimate'}  |  Amount: ${test_samples.loc[i,'Amount']:.2f}",
         )
 
-        raw_row = test_samples.loc[[selected_idx], FEATURE_COLS]
+        raw_row = test_samples.loc[[selected_idx]].copy()
+        raw_row.drop(columns=["Class"], inplace=True)
         actual_label = int(test_samples.loc[selected_idx, "Class"])
 
         # Display selected transaction parameters grid
         st.markdown('<div class="section-title">🔍 Selected Transaction Parameters</div>', unsafe_allow_html=True)
-        t_val = test_samples.loc[selected_idx, 'Time']
+        t_val = test_samples.loc[selected_idx, 'Hour'] * 3600 if 'Hour' in test_samples.columns else test_samples.loc[selected_idx, 'Time']
         a_val = test_samples.loc[selected_idx, 'Amount']
         v14_val = test_samples.loc[selected_idx, 'V14']
         v17_val = test_samples.loc[selected_idx, 'V17']
@@ -754,11 +756,24 @@ with tab1:
     predict_btn = st.button("🚀 Run Fraud Detection", type="primary", use_container_width=True)
 
     if predict_btn:
-        result = predict_transaction(model, scaler, raw_row)
+        import requests
+        with st.spinner("Analyzing transaction via API..."):
+            try:
+                # Convert raw_row to dict for API payload
+                payload = raw_row.iloc[0].to_dict()
+                if "Hour" in payload and "Time" not in payload:
+                    payload["Time"] = payload.pop("Hour") * 3600
+                api_url = os.getenv("API_URL", "http://localhost:8000")
+                response = requests.post(f"{api_url}/predict", json=payload)
+                response.raise_for_status()
+                result = response.json()
+            except Exception as e:
+                st.error(f"API Error: Please ensure the FastAPI backend is running on port 8000. \n\n Details: {e}")
+                st.stop()
 
         col_a, col_b = st.columns(2)
         with col_a:
-            if result["class"] == 1:
+            if result["prediction_class"] == 1:
                 st.markdown('<div class="verdict-fraud">⚠️ FRAUDULENT TRANSACTION DETECTED</div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="verdict-legit">✅ LEGITIMATE TRANSACTION</div>', unsafe_allow_html=True)
@@ -768,7 +783,7 @@ with tab1:
             st.progress(result["probability"], text=f"Fraud Probability: {result['probability']*100:.2f}%")
 
         if actual_label is not None:
-            correct = result["class"] == actual_label
+            correct = result["prediction_class"] == actual_label
             st.info(
                 f"**Ground Truth:** {'🔴 Fraud' if actual_label==1 else '🟢 Legitimate'} | "
                 f"**Prediction:** {'Correct ✅' if correct else 'Incorrect ❌'}"
@@ -780,9 +795,12 @@ with tab1:
             "_The waterfall plot shows which features pushed the model's prediction toward "
             "fraud (red, positive SHAP) or away from fraud (blue, negative SHAP)._"
         )
-        with st.spinner("Computing SHAP values…"):
-            fig = get_local_shap_waterfall_fig(model, result["scaled_df"])
-            st.pyplot(fig, use_container_width=True)
+        with st.spinner("Rendering SHAP plot from API..."):
+            import base64
+            import io
+            img_data = base64.b64decode(result["shap_waterfall_base64"])
+            image = Image.open(io.BytesIO(img_data))
+            st.image(image, use_container_width=True)
 
 # ══════════════════════════════════════════════════════════════════
 # TAB 2 – MODEL METRICS

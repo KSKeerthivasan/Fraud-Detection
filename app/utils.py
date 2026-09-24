@@ -37,11 +37,17 @@ def load_ml_assets():
 
 def scale_features(raw_features_df: pd.DataFrame, scaler) -> pd.DataFrame:
     """
-    Scales the raw Time and Amount columns using the fitted RobustScaler.
+    Transforms Time into Hour, and scales Hour and Amount using the fitted RobustScaler.
     V1-V28 are already PCA-transformed and do not require further scaling.
     """
     scaled = raw_features_df.copy()
-    scaled[["Time", "Amount"]] = scaler.transform(raw_features_df[["Time", "Amount"]])
+    if "Time" in scaled.columns:
+        scaled["Hour"] = (scaled["Time"] % 86400) / 3600
+        scaled = scaled.drop(columns=["Time"])
+    
+    # Ensure column order matches scaler training
+    cols = ["Hour", "Amount"]
+    scaled[cols] = scaler.transform(scaled[cols])
     return scaled
 
 
@@ -55,7 +61,13 @@ def predict_transaction(model, scaler, raw_features_df: pd.DataFrame) -> dict:
       - scaled_df   (the scaled DataFrame for downstream SHAP use)
     """
     scaled_df = scale_features(raw_features_df, scaler)
-    prob = float(model.predict_proba(scaled_df)[0, 1])
+    prob_smote = float(model.predict_proba(scaled_df)[0, 1])
+    
+    # Recalibrate probability due to SMOTE training oversampling
+    # Training set fraud ratio is ~0.17%
+    beta = 0.00173 
+    prob = (beta * prob_smote) / max(1e-7, (beta * prob_smote + 1 - prob_smote))
+    prob = min(max(prob, 0.0), 1.0)
 
     if prob < 0.30:
         risk_level, risk_color = "Low", "green"
@@ -98,8 +110,11 @@ def get_local_shap_waterfall_fig(model, scaled_features_df: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(10, 6.5), facecolor="#0b0f19")
     ax.set_facecolor("#111827")
     
-    # Generate waterfall plot inside our axis
-    shap.plots.waterfall(shap_values[0], max_display=12, show=False)
+    # Generate waterfall plot inside our axis (handle matplotlib>=3.8 tick bug)
+    try:
+        shap.plots.waterfall(shap_values[0], max_display=12, show=False)
+    except IndexError:
+        pass
     
     # Target all text elements and set high-contrast colors
     ax = fig.gca()

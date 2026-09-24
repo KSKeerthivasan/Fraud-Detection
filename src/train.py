@@ -12,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src import config
 from src.preprocess import preprocess_pipeline
 from src.evaluate import run_evaluation_pipeline, calculate_metrics
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.over_sampling import SMOTE
 from src.explain import run_shap_pipeline
 
 def train_and_compare_baselines(X_train, X_test, y_train, y_test):
@@ -77,20 +79,20 @@ def tune_xgboost(X_train, y_train):
     # Initialize Stratified K-Fold
     cv = StratifiedKFold(n_splits=config.CV_SPLITS, shuffle=True, random_state=config.RANDOM_STATE)
     
-    xgb = XGBClassifier(
-        random_state=config.RANDOM_STATE, 
-        n_jobs=-1,
-        eval_metric="logloss"
-    )
+    pipeline = ImbPipeline([
+        ('smote', SMOTE(random_state=config.RANDOM_STATE)),
+        ('xgb', XGBClassifier(random_state=config.RANDOM_STATE, n_jobs=-1, eval_metric="logloss"))
+    ])
+    
+    # Prepend 'xgb__' to the parameter grid keys for the pipeline
+    param_grid = {f'xgb__{k}': v for k, v in config.XGB_PARAM_DIST.items()}
     
     # We optimize for F1-Score because it balances precision (minimizing false alarms)
     # and recall (finding actual frauds), which is the primary challenge in fraud detection.
-    # Refitting on F1 score ensures we select a model that maintains high detection rates
-    # without overwhelming analysts with false positives.
-    print(f"Running RandomizedSearchCV with {config.CV_SPLITS}-fold CV...")
+    print(f"Running RandomizedSearchCV with {config.CV_SPLITS}-fold CV using Pipeline (no data leakage)...")
     search = RandomizedSearchCV(
-        estimator=xgb,
-        param_distributions=config.XGB_PARAM_DIST,
+        estimator=pipeline,
+        param_distributions=param_grid,
         n_iter=10, # 10 iterations to balance depth of search and training time
         scoring='f1',
         cv=cv,
@@ -104,17 +106,18 @@ def tune_xgboost(X_train, y_train):
     print(f"Best parameters found: {search.best_params_}")
     print(f"Best cross-validation F1 score: {search.best_score_:.4f}")
     
-    return search.best_estimator_
+    # Extract the XGBoost model from the best pipeline
+    return search.best_estimator_.named_steps['xgb']
 
 def main():
     # 1. Preprocess data
-    X_train_res, X_test_scaled, y_train_res, y_test = preprocess_pipeline()
+    X_train_res, y_train_res, X_train_scaled, X_test_scaled, y_train, y_test = preprocess_pipeline()
     
     # 2. Baseline comparison
     baseline_df = train_and_compare_baselines(X_train_res, X_test_scaled, y_train_res, y_test)
     
-    # 3. XGBoost Hyperparameter Tuning
-    best_xgb = tune_xgboost(X_train_res, y_train_res)
+    # 3. XGBoost Hyperparameter Tuning on UNSMOTED data (SMOTE applied inside CV)
+    best_xgb = tune_xgboost(X_train_scaled, y_train)
     
     # Save the best model
     # WHY XGBOOST WAS SELECTED AS THE FINAL MODEL:
@@ -134,7 +137,9 @@ def main():
     print("\n==================================================")
     print("Step 3: Running Detailed Model Evaluation & Curves")
     print("==================================================")
-    eval_metrics, threshold_table = run_evaluation_pipeline(best_xgb, X_test_scaled, y_test)
+    # Calculate beta for probability recalibration due to SMOTE prior shift
+    beta = sum(y_train) / max(1, (len(y_train) - sum(y_train)))
+    eval_metrics, threshold_table = run_evaluation_pipeline(best_xgb, X_test_scaled, y_test, beta)
     
     # 5. Run SHAP explainability
     print("\n==================================================")

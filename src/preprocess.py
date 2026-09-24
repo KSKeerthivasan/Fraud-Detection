@@ -36,7 +36,9 @@ def scale_and_split(df):
     distributions and contain significant outliers. RobustScaler scales features using
     the median and Interquartile Range (IQR), making it robust to outliers.
     """
-    X = df.drop(columns=["Class"])
+    # Convert Time to Hour for better generalization
+    df["Hour"] = (df["Time"] % 86400) / 3600
+    X = df.drop(columns=["Class", "Time"])
     y = df["Class"]
     
     # Perform a stratified train-test split to preserve the ratio of fraud cases
@@ -58,7 +60,7 @@ def scale_and_split(df):
     X_train_scaled = X_train.copy()
     X_test_scaled = X_test.copy()
     
-    cols_to_scale = ["Time", "Amount"]
+    cols_to_scale = ["Hour", "Amount"]
     X_train_scaled[cols_to_scale] = scaler.fit_transform(X_train[cols_to_scale])
     X_test_scaled[cols_to_scale] = scaler.transform(X_test[cols_to_scale])
     
@@ -124,7 +126,8 @@ def preprocess_pipeline():
     # Save test explorer samples
     save_test_dataset_explorer_samples(X_test_raw, y_test)
     
-    # Apply SMOTE to training data only
+    # Apply SMOTE to training data for baselines
     X_train_res, y_train_res = apply_smote(X_train_scaled, y_train)
     
-    return X_train_res, X_test_scaled, y_train_res, y_test
+    # Return both SMOTEd data (for baselines) and un-SMOTEd scaled data (for Pipeline CV)
+    return X_train_res, y_train_res, X_train_scaled, X_test_scaled, y_train, y_test

@@ -38,6 +38,10 @@ def analyze_thresholds(y_true, y_prob):
     Evaluates model performance at thresholds 0.30, 0.50, and 0.70.
     Demonstrates the trade-off between recall (finding all frauds) 
     and precision (minimizing false alarms).
+    
+    NOTE: In a true production environment, the optimal threshold should be selected 
+    using a hold-out validation set or out-of-fold cross-validation predictions, 
+    not the test set. Here we analyze the test set sensitivity for reporting purposes.
     """
     thresholds = [0.30, 0.50, 0.70]
     results = []
@@ -196,13 +200,19 @@ def plot_xgb_feature_importance(model, feature_names, save_path=None):
         plt.savefig(save_path, dpi=300)
     plt.close()
 
-def run_evaluation_pipeline(model, X_test, y_test):
+def run_evaluation_pipeline(model, X_test, y_test, beta=0.00173):
     """
     Orchestrates the evaluation of the model, saves plots and returns performance metrics.
     """
-    # Get predictions and probabilities
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1]
+    # Get probabilities from SMOTE-trained model
+    y_prob_smote = model.predict_proba(X_test)[:, 1]
+    
+    # Recalibrate probability due to SMOTE training oversampling
+    # P(y=1|x) = (beta * P_smote) / (beta * P_smote + 1 - P_smote)
+    y_prob = (beta * y_prob_smote) / np.maximum(1e-7, (beta * y_prob_smote + 1 - y_prob_smote))
+    y_prob = np.clip(y_prob, 0.0, 1.0)
+    
+    y_pred = (y_prob >= 0.50).astype(int)
     
     # Calculate metrics
     metrics = calculate_metrics(y_test, y_pred, y_prob)
