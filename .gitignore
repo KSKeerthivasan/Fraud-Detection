@@ -20,6 +20,5 @@ Thumbs.db
 # Data files (Exclude large raw dataset)
 data/creditcard.csv
 
-# Serialized models and joblib files
+# Serialized models (pkl excluded, joblib tracked for CI/CD)
 *.pkl
-*.joblib
