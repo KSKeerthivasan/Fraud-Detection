@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ Explainable Financial Fraud Detection
+#  Explainable Financial Fraud Detection
 
 **A production-grade, containerised machine learning system for real-time credit card fraud detection — featuring microservice architecture, SHAP explainability, and automated CI/CD.**
 
